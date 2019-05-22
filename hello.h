@@ -56,11 +56,13 @@ void consultar_rrn(char*, int);      /* Função responsável por consultar e ex
 void remover_registro(char*, char*, char*, int); /* Função que remove registros que satisfaçam o critério de busca do usuario */
 void insercao_adicional(char*, int, char*, int); /* Função que insere dados nos registros removidos */
 void atualizar_registro(char*, int, char*, char*, int); /* Função que atualiza um registro */
-void ordenaInteiro(char*, char*);
-int qtdRegistro(FILE*);
-void guardaDados(FILE*, Dados_PTR);
-void swap(Dados_PTR, Dados_PTR);
-int partition (Dados_PTR, int, int);
-void quickSort(Dados_PTR, int, int);
-void escrever_dados(Dados_PTR, FILE*, int*, char*, char*);
+void ordenaInteiro(char*, char*); /* Função que lê e ordena os registros para inseri-los em um novo arquivo, já ordenados */
+int qtdRegistro(FILE*); /* Retorna a quantidade de registros (sem considerar os removidos) */
+int guardaDados(FILE*, Dados_PTR); /* Função que armazena todos os registros do arquivo em vetores */
+void merge(Dados_PTR*, int, int, int); /* Função utilizada pelo mergeSort para ordenar o vetor */
+void mergeSort(Dados_PTR*, int, int); /* Ordena o vetor */
+void escrever_dados(Dados_PTR, FILE*, int*, char*, char*); /* Função que escreve os registros no arquivo */
+void troca_reg(Dados_PTR, Dados_PTR, int, int); /* Função que associa os campos dos registros do arquivo antigo com o novo */
+void merging(char*, char*, char*); /* Função que realiza o processo de merging entre dois arquivos */
+void matching(char*, char*, char*); /* Função que realiza o processo de matching entre dois arquivos */
 void binarioNaTela1(FILE*); /* Função que mostra a saída do arquivo binário */

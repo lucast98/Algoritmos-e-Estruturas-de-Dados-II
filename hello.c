@@ -1201,9 +1201,8 @@ void atualizar_registro(char *nome_file, int rrn, char *nome_campo, char *valor,
             }
         }
     }
-    if(ultimo == 1){
+    if(ultimo == 1)
         binarioNaTela1(file); /* quando for o ultimo registro, printa o binario */
-    }
     fclose(file);
 }
 
@@ -1211,10 +1210,10 @@ void ordenaInteiro(char *file_in, char *file_out){
     int qtd, i, cont, pos = TAM_PAGE;
     char lixo = '@';
     FILE* file = fopen(file_in, "rb");
-    FILE* file2 = fopen(file_out, "wb");
-    if(!file || !file2){
-        printf("Falha no processamento do arquivo.");
-        return; /* caso o arquivo não exista ou ocorra outro erro, retorna para a main */
+    FILE* file2 = fopen(file_out, "wb+");
+    if(!file2 || !file){
+        printf("Falha no carregamento do arquivo.");
+        return; /* caso o arquivo não exista ou ocorra outro erro, retorna */
     }
     Dados_PTR dado;
     Header head;
@@ -1224,66 +1223,66 @@ void ordenaInteiro(char *file_in, char *file_out){
         printf("Falha no processamento do arquivo.");
         return; /* se o status for igual a 0, não é possivel ler o resto do arquivo */
     }
-    qtd = qtdRegistro(file);
+    qtd = qtdRegistro(file); /* retorna a quantidade de registros (sem considerar os campos removidos) */
     dado = (Dados_PTR) malloc(qtd*sizeof(Dados));
-    fseek(file, TAM_PAGE, SEEK_SET);
-    guardaDados(file, dado);
-    mergeSort(&dado, 0, qtd-1);
-    /*for(i = 0; i < 5000; i++){
-        printf("%d %s %s %s\n", dado[i].nroInscricao, dado[i].data, dado[i].cidade, dado[i].nomeEscola);
-    }*/
+    fseek(file, TAM_PAGE, SEEK_SET); /* pula para o fim da pagina de disco do cabecalho */
+    qtd = guardaDados(file, dado); /* guarda os campos do arquivo e retorna a quantidade real de registros */
+    mergeSort(&dado, 0, qtd-1); /* ordena o vetor */
+
     /* Registros */
     iniciar_cabecalho(head); /* fornece os valores iniciais para o cabeçalho */
     escrever_cabecalho(head, file2); /* escreve os valores iniciais do cabeçalho no arquivo binário */
     preenche_registros(file2, TAM_CAB, TAM_PAGE); /* como o registro de cabeçalho ocupa uma página de disco inteira, é necessário preencher o resto da página */
     for(i = 0; i < qtd; i++){
-        cont = 0;
-        dado[i].indCid = strlen(dado[i].cidade);
-        if(dado[i].indCid != 0){
-            dado[i].indCid += 2;
-            dado[i].tagCampo4 = '4';
-        }
-        dado[i].indEsc = strlen(dado[i].nomeEscola);
-        if(dado[i].indEsc != 0){
-            dado[i].indEsc += 2;
-            dado[i].tagCampo5 = '5';
-        }
-        escrever_dados(&dado[i], file2, &cont, dado[i].cidade, dado[i].nomeEscola);
-        pos = cont+2+pos; /* método para inserir os @s no fim dos registros */
-        //printf("%d %d\n", pos, (TAM_PAGE+(i+1)*80));
-        while(pos < (TAM_PAGE+(i+1)*80)){
-            fwrite(&lixo, sizeof(lixo), 1, file2);
-            pos++;
-        }
-        if((i != 0 && dado[i].indCid <= 0) || (i != 0 && dado[i].indEsc <= 0)){ /* caso um dos campos variaveis seja nulo, é necessário inserir mais um @ */
-            fwrite(&lixo, sizeof(lixo), 1, file2);
-            if(dado[i].indCid <= 0 && dado[i].indEsc <= 0) /* caso os dois campos variaveis sejam nulos, é necessário inserir um @ extra */
+        if(dado[i].removido != '*'){ /* confere se não há registro removido */
+            cont = 0;
+            dado[i].indCid = strlen(dado[i].cidade); /* associa a quantidade de caracteres ao indicador de tamanho */
+            if(dado[i].indCid != 0){
+                dado[i].indCid += 2; /* acrescenta tag e \0 */
+                dado[i].tagCampo4 = '4';
+            }
+            dado[i].indEsc = strlen(dado[i].nomeEscola); /* associa a quantidade de caracteres ao indicador de tamanho */
+            if(dado[i].indEsc != 0){
+                dado[i].indEsc += 2; /* acrescenta tag e \0 */
+                dado[i].tagCampo5 = '5';
+            }
+            escrever_dados(&dado[i], file2, &cont, dado[i].cidade, dado[i].nomeEscola); /* escreve os campos de dados no arquivo */
+            pos = cont+2+pos; /* método para inserir os @s no fim dos registros */
+            while(pos < (TAM_PAGE+(i+1)*80)){
                 fwrite(&lixo, sizeof(lixo), 1, file2);
+                pos++;
+            }
+            if((i != 0 && dado[i].indCid <= 0) || (i != 0 && dado[i].indEsc <= 0)){ /* caso um dos campos variaveis seja nulo, é necessário inserir mais um @ */
+                fwrite(&lixo, sizeof(lixo), 1, file2);
+                if(dado[i].indCid <= 0 && dado[i].indEsc <= 0) /* caso os dois campos variaveis sejam nulos, é necessário inserir um @ extra */
+                    fwrite(&lixo, sizeof(lixo), 1, file2);
+            }
         }
     }
     head->status = '1'; /* depois que o arquivo foi escrito, atualiza o valor do status */
     fseek(file2, 0, SEEK_SET); /* retorna para o inicio do arquivo binario */
     fwrite(&(head->status), sizeof(char), 1, file2); /* reescreve o status no cabeçalho */
+    binarioNaTela1(file2);
     fclose(file2);
     fclose(file);
 }
 
 int qtdRegistro(FILE *file){
     int qtd;
-    int pos_ant = ftell(file);
-    fseek(file, 0, SEEK_END);
-    qtd = (ftell(file) - TAM_PAGE)/TAM_DAD;
-    fseek(file, pos_ant, SEEK_SET);
+    int pos_ant = ftell(file); /* armazena posição atual do arquivo */
+    fseek(file, 0, SEEK_END); /* vai para o fim do arquivo */
+    qtd = (ftell(file) - TAM_PAGE)/TAM_DAD; /* expressao para o calculo do numero de registros */
+    fseek(file, pos_ant, SEEK_SET); /* retorna para a posição anterior */
     return qtd;
 }
 
-void guardaDados(FILE *file, Dados_PTR dado){
-    int i = 0, ret_fun;
+int guardaDados(FILE *file, Dados_PTR dado){
+    int i = 0, j = 0, ret_fun;
     while(!feof(file)){
-        dado[i].nomeEscola = (char*) calloc(30, sizeof(char));
-        dado[i].cidade = (char*)calloc(30, sizeof(char));
         fread(&(dado[i].removido), sizeof(dado[i].removido), 1, file); /* lê o campo removido no arquivo binario */
         if(dado[i].removido != '*'){
+            dado[i].nomeEscola = (char*) calloc(30, sizeof(char));
+            dado[i].cidade = (char*)calloc(30, sizeof(char));
             fread(&(dado[i].encadeamento), sizeof(dado[i].encadeamento), 1, file); /* lê o campo encadeamento no arquivo binario */
             ret_fun = fread(&(dado[i].nroInscricao), sizeof(dado[i].nroInscricao), 1, file); /* lê o campo nroInscricao no arquivo binario */
             if(ret_fun == 0)   /* condicao de saida */
@@ -1316,10 +1315,12 @@ void guardaDados(FILE *file, Dados_PTR dado){
                     }
                 }
             }
+            i++;
         }
-        i++;
-        fseek(file, (TAM_PAGE+i*80), SEEK_SET); /* pula para o começo de um novo registro */
+        j++;
+        fseek(file, (TAM_PAGE+j*80), SEEK_SET); /* pula para o começo de um novo registro */
     }
+    return i;
 }
 
 void merge(Dados_PTR *arr, int l, int m, int r){
@@ -1437,10 +1438,8 @@ void merge(Dados_PTR *arr, int l, int m, int r){
 void mergeSort(Dados_PTR *arr, int l, int r){
     if (l < r){
         int m = l+(r-l)/2;
-
         mergeSort(arr, l, m);
         mergeSort(arr, m+1, r);
-
         merge(arr, l, m, r);
     }
 }
@@ -1473,7 +1472,7 @@ void escrever_dados(Dados_PTR dado, FILE *file, int *cont, char *cid_aux, char *
         *cont += sizeof(dado->tagCampo4);
         escrever_string(file, cid_aux, (dado->indCid - 2)); /* função que escreve o campo cidade no arquivo binario */
         *cont += dado->indCid - 2;
-        fwrite(&c, sizeof(c), 1, file);
+        fwrite(&c, sizeof(c), 1, file); /* escreve o \0 */
     }
     if(dado->indEsc > 0){ /* se o indicador de tamanho for maior que 0, significa que o campo escola existe */
         fwrite(&(dado->indEsc), sizeof(dado->indEsc), 1, file); /* escreve o campo indicador de tamanho (escola) no arquivo binario */
@@ -1482,8 +1481,212 @@ void escrever_dados(Dados_PTR dado, FILE *file, int *cont, char *cid_aux, char *
         *cont += sizeof(dado->tagCampo5);
         escrever_string(file, esc_aux, (dado->indEsc - 2)); /* função que escreve o campo nomeEscola no arquivo binario */
         *cont += dado->indEsc - 2;
-        fwrite(&c, sizeof(c), 1, file);
+        fwrite(&c, sizeof(c), 1, file); /* escreve o \0 */
     }
+}
+
+void troca_reg(Dados_PTR dado_novo, Dados_PTR dado, int i, int ind){
+    dado_novo[i].removido = dado[ind].removido; /* associa o campo removido do arquivo antigo com o do novo */
+    dado_novo[i].encadeamento = dado[ind].encadeamento; /* associa o campo encadeamento do arquivo antigo com o do novo */
+    dado_novo[i].nroInscricao = dado[ind].nroInscricao; /* associa o campo nroInscricao do arquivo antigo com o do novo */
+    dado_novo[i].nota = dado[ind].nota; /* associa o campo nota do arquivo antigo com o do novo */
+    strcpy(dado_novo[i].data, dado[ind].data); /* associa o campo data do arquivo antigo com o do novo */
+
+    dado_novo[i].indCid = dado[ind].indCid; /* associa o campo indicador de tamanho (cidade) do arquivo antigo com o do novo */
+    dado_novo[i].tagCampo4 = dado[ind].tagCampo4; /* associa o campo tagCampo4 do arquivo antigo com o do novo */
+    dado_novo[i].cidade = (char *)calloc(sizeof(char), strlen(dado[ind].cidade)+1); /* é necessário realizar o malloc toda vez, pois há comparações em que o campo pode não existir, o que, sem o malloc, dará erro */
+    if(strlen(dado[ind].cidade) > 0)
+        strcpy(dado_novo[i].cidade, dado[ind].cidade); /* associa o campo cidade do arquivo antigo com o do novo */
+
+    dado_novo[i].indEsc = dado[ind].indEsc; /* associa o campo indicador de tamanho (nomeEscola) do arquivo antigo com o do novo */
+    dado_novo[i].tagCampo5 = dado[ind].tagCampo5; /* associa o campo tagCampo5 do arquivo antigo com o do novo */
+    dado_novo[i].nomeEscola = (char *)calloc(sizeof(char), strlen(dado[ind].nomeEscola)+1); /* é necessário realizar o malloc toda vez, pois há comparações em que o campo pode não existir, o que, sem o malloc, dará erro */
+    if(strlen(dado[ind].nomeEscola) > 0)
+        strcpy(dado_novo[i].nomeEscola, dado[ind].nomeEscola); /* associa o campo nomeEscola do arquivo antigo com o do novo */
+}
+
+void merging(char *file_in1, char *file_in2, char *file_out){
+    int qtd1, qtd2, ind1 = 0, ind2 = 0, i = 0, rep = 0, cont = 0, pos = TAM_PAGE;
+    char lixo = '@';
+    FILE* file = fopen(file_in1, "rb");
+    FILE* file2 = fopen(file_in2, "rb");
+    FILE* file3 = fopen(file_out, "wb+");
+    if(!file3 || !file2 || !file){
+        printf("Falha no carregamento do arquivo.");
+        return; /* caso o arquivo não exista ou ocorra outro erro, retorna */
+    }
+    Dados_PTR dado1, dado2, dado3;
+    Header head1, head2, head3;
+    head1 = (Header) malloc(sizeof(Cabecalho));
+    head2 = (Header) malloc(sizeof(Cabecalho));
+    head3 = (Header) malloc(sizeof(Cabecalho));
+    fread(&(head1->status), sizeof(head1->status), 1, file); /* lê o status do arquivo1*/
+    fread(&(head2->status), sizeof(head2->status), 1, file); /* lê o status do arquivo2*/
+    if(head1->status == '0' || head2->status == '0'){
+        printf("Falha no processamento do arquivo.");
+        return; /* se o status for igual a 0, não é possivel ler o resto do arquivo */
+    }
+    qtd1 = qtdRegistro(file); /* retorna a quantidade de registros (sem considerar os campos removidos) */
+    qtd2 = qtdRegistro(file2); /* retorna a quantidade de registros (sem considerar os campos removidos) */
+    dado1 = (Dados_PTR) malloc(qtd1*sizeof(Dados));
+    dado2 = (Dados_PTR) malloc(qtd2*sizeof(Dados));
+    fseek(file, TAM_PAGE, SEEK_SET); /* pula para o fim do cabeçalho */
+    fseek(file2, TAM_PAGE, SEEK_SET); /* pula para o fim do cabeçalho */
+    qtd1 = guardaDados(file, dado1); /* quantidade real de registros */
+    qtd2 = guardaDados(file2, dado2); /* quantidade real de registros */
+    dado3 = (Dados_PTR) malloc((qtd1+qtd2)*sizeof(Dados)); /* dado3 representa os registros do novo arquivo */
+    mergeSort(&dado1, 0, qtd1-1); /* ordena o vetor com os registros do primeiro arquivo */
+    mergeSort(&dado2, 0, qtd2-1); /* ordena o vetor com os registros do segundo arquivo */
+    while(ind1 < qtd1 && ind2 < qtd2){
+        if(dado1[ind1].nroInscricao <= dado2[ind2].nroInscricao){
+            troca_reg(dado3, dado1, i, ind1); /* Função que associa os campos dos registros do arquivo antigo com o novo */
+            ind1++;
+
+            if(dado1[ind1].nroInscricao == dado2[ind2].nroInscricao){
+                ind2++;
+                rep++; /* variacao que indica quando há repetições de registros */
+            }
+        }
+        else{
+            if(dado1[ind1].nroInscricao > dado2[ind2].nroInscricao){
+                troca_reg(dado3, dado2, i, ind2); /* Função que associa os campos dos registros do arquivo antigo com o novo */
+                ind2++;
+            }
+        }
+        i++;
+    }
+    while(ind1 < qtd1){
+        troca_reg(dado3, dado1, i, ind1); /* Função que associa os campos dos registros do arquivo antigo com o novo */
+        i++;
+        ind1++;
+    }
+    while(ind2 < qtd2){
+        troca_reg(dado3, dado2, i, ind2); /* Função que associa os campos dos registros do arquivo antigo com o novo */
+        i++;
+        ind2++;
+    }
+    /* Registros */
+    iniciar_cabecalho(head3); /* fornece os valores iniciais para o cabeçalho */
+    escrever_cabecalho(head3, file3); /* escreve os valores iniciais do cabeçalho no arquivo binário */
+    preenche_registros(file3, TAM_CAB, TAM_PAGE); /* como o registro de cabeçalho ocupa uma página de disco inteira, é necessário preencher o resto da página */
+    for(i = 0; i < qtd1+qtd2-rep; i++){
+        cont = 0;
+        dado3[i].indCid = strlen(dado3[i].cidade); /* associa a quantidade de caracteres ao indicador de tamanho */
+        if(dado3[i].indCid != 0){
+            dado3[i].indCid += 2; /* acrescenta tag e \0 */
+            dado3[i].tagCampo4 = '4';
+        }
+        dado3[i].indEsc = strlen(dado3[i].nomeEscola); /* associa a quantidade de caracteres ao indicador de tamanho */
+        if(dado3[i].indEsc != 0){
+            dado3[i].indEsc += 2; /* acrescenta tag e \0 */
+            dado3[i].tagCampo5 = '5';
+        }
+        escrever_dados(&dado3[i], file3, &cont, dado3[i].cidade, dado3[i].nomeEscola); /* função que escreve os campos do registro no arquivo */
+        pos = cont+2+pos; /* método para inserir os @s no fim dos registros */
+        while(pos < (TAM_PAGE+(i+1)*80)){
+            fwrite(&lixo, sizeof(lixo), 1, file3);
+            pos++;
+        }
+        if((i != 0 && dado3[i].indCid <= 0) || (i != 0 && dado3[i].indEsc <= 0)){ /* caso um dos campos variaveis seja nulo, é necessário inserir mais um @ */
+            fwrite(&lixo, sizeof(lixo), 1, file3);
+            if(dado3[i].indCid <= 0 && dado3[i].indEsc <= 0) /* caso os dois campos variaveis sejam nulos, é necessário inserir um @ extra */
+                fwrite(&lixo, sizeof(lixo), 1, file3);
+        }
+    }
+
+    head3->status = '1'; /* depois que o arquivo foi escrito, atualiza o valor do status */
+    fseek(file3, 0, SEEK_SET); /* retorna para o inicio do arquivo binario */
+    fwrite(&(head3->status), sizeof(char), 1, file3); /* reescreve o status no cabeçalho */
+    binarioNaTela1(file3);
+
+    fclose(file3);
+    fclose(file2);
+    fclose(file);
+}
+
+void matching(char *file_in1, char *file_in2, char *file_out){
+    int qtd1, qtd2, ind1 = 0, ind2 = 0, i = 0, j = 0, cont, pos = TAM_PAGE;
+    char lixo = '@';
+    FILE* file = fopen(file_in1, "rb");
+    FILE* file2 = fopen(file_in2, "rb");
+    FILE* file3 = fopen(file_out, "wb+");
+    if(!file3 || !file2 || !file){
+        printf("Falha no carregamento do arquivo.");
+        return; /* caso o arquivo não exista ou ocorra outro erro, retorna */
+    }
+    Dados_PTR dado1, dado2, dado3;
+    Header head1, head2, head3;
+    head1 = (Header) malloc(sizeof(Cabecalho));
+    head2 = (Header) malloc(sizeof(Cabecalho));
+    head3 = (Header) malloc(sizeof(Cabecalho));
+    fread(&(head1->status), sizeof(head1->status), 1, file); /* lê o status do arquivo1*/
+    fread(&(head2->status), sizeof(head2->status), 1, file); /* lê o status do arquivo2*/
+    if(head1->status == '0' || head2->status == '0'){
+        printf("Falha no processamento do arquivo.");
+        return; /* se o status for igual a 0, não é possivel ler o resto do arquivo */
+    }
+    qtd1 = qtdRegistro(file);  /* retorna a quantidade de registros (sem considerar os campos removidos) */
+    qtd2 = qtdRegistro(file2);  /* retorna a quantidade de registros (sem considerar os campos removidos) */
+    dado1 = (Dados_PTR) malloc(qtd1*sizeof(Dados));
+    dado2 = (Dados_PTR) malloc(qtd2*sizeof(Dados));
+    fseek(file, TAM_PAGE, SEEK_SET); /* pula para o fim do cabeçalho */
+    fseek(file2, TAM_PAGE, SEEK_SET); /* pula para o fim do cabeçalho */
+    qtd1 = guardaDados(file, dado1); /* quantidade real de registros */
+    qtd2 = guardaDados(file2, dado2); /* quantidade real de registros */
+    dado3 = (Dados_PTR) malloc((qtd1+qtd2)*sizeof(Dados));
+    mergeSort(&dado1, 0, qtd1-1); /* ordena os registros */
+    mergeSort(&dado2, 0, qtd2-1); /* ordena os registros */
+    j=0;
+    while(ind1 < qtd1 && ind2 < qtd2){
+        if(dado1[ind1].nroInscricao < dado2[ind2].nroInscricao)
+            ind1++;
+        else{
+            if(dado1[ind1].nroInscricao > dado2[ind2].nroInscricao)
+                ind2++;
+            else{
+                troca_reg(dado3, dado1, j, ind1); /* Função que associa os campos dos registros do arquivo antigo com o novo */
+                ind1++;
+                ind2++;
+                j++;
+            }
+        }
+    }
+    /* Registros */
+    iniciar_cabecalho(head3); /* fornece os valores iniciais para o cabeçalho */
+    escrever_cabecalho(head3, file3); /* escreve os valores iniciais do cabeçalho no arquivo binário */
+    preenche_registros(file3, TAM_CAB, TAM_PAGE); /* como o registro de cabeçalho ocupa uma página de disco inteira, é necessário preencher o resto da página */
+    for(i = 0; i < j; i++){
+        cont = 0;
+        dado3[i].indCid = strlen(dado3[i].cidade); /* associa a quantidade de caracteres ao indicador de tamanho */
+        if(dado3[i].indCid != 0){
+            dado3[i].indCid += 2; /* acrescenta tag e \0 */
+            dado3[i].tagCampo4 = '4';
+        }
+        dado3[i].indEsc = strlen(dado3[i].nomeEscola); /* associa a quantidade de caracteres ao indicador de tamanho */
+        if(dado3[i].indEsc != 0){
+            dado3[i].indEsc += 2; /* acrescenta tag e \0 */
+            dado3[i].tagCampo5 = '5';
+        }
+        escrever_dados(&dado3[i], file3, &cont, dado3[i].cidade, dado3[i].nomeEscola); /* função que escreve os campos do registro no arquivo */
+        pos = cont+2+pos; /* método para inserir os @s no fim dos registros */
+        while(pos < (TAM_PAGE+(i+1)*80)){
+            fwrite(&lixo, sizeof(lixo), 1, file3);
+            pos++;
+        }
+        if((i != 0 && dado3[i].indCid <= 0) || (i != 0 && dado3[i].indEsc <= 0)){ /* caso um dos campos variaveis seja nulo, é necessário inserir mais um @ */
+            fwrite(&lixo, sizeof(lixo), 1, file3);
+            if(dado3[i].indCid <= 0 && dado3[i].indEsc <= 0) /* caso os dois campos variaveis sejam nulos, é necessário inserir um @ extra */
+                fwrite(&lixo, sizeof(lixo), 1, file3);
+        }
+    }
+    head3->status = '1'; /* depois que o arquivo foi escrito, atualiza o valor do status */
+    fseek(file3, 0, SEEK_SET); /* retorna para o inicio do arquivo binario */
+    fwrite(&(head3->status), sizeof(char), 1, file3); /* reescreve o status no cabeçalho */
+    binarioNaTela1(file3);
+
+    fclose(file3);
+    fclose(file2);
+    fclose(file);
 }
 
 void binarioNaTela1(FILE *ponteiroArquivoBinario) {

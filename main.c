@@ -5,7 +5,7 @@
 #include "hello.h"
 
 int main(){
-    char nome_file[20], nome_file_ord[20], nome_campo[20], valor[40], campos[100];
+    char nome_file[20], nome_file2[20], nome_file_ord[20], nome_campo[20], valor[40], campos[100];
     int opt, rrn, n, i = 0, valorNroInscricao;
 
     Header head = calloc(1, sizeof(Cabecalho)); /* Cria a estrutura do cabeçalho */
@@ -64,6 +64,14 @@ int main(){
     case 8:
         scanf("%s %s", nome_file, nome_file_ord); /* Digita o nome dos arquivos binários */
         ordenaInteiro(nome_file, nome_file_ord);
+        break;
+    case 9:
+        scanf("%s %s %s", nome_file, nome_file2, nome_file_ord); /* Digita o nome dos arquivos binários */
+        merging(nome_file, nome_file2, nome_file_ord);
+        break;
+    case 10:
+        scanf("%s %s %s", nome_file, nome_file2, nome_file_ord); /* Digita o nome dos arquivos binários */
+        matching(nome_file, nome_file2, nome_file_ord);
         break;
     }
     return 0;

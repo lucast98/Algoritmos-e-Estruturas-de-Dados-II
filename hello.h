@@ -9,15 +9,29 @@
 #define TAM_CAB 285
 #define TAM_DAD 80
 #define TAM_PAGE 16000
+#define TAM_IND 5
+#define TAM_DAD_IND 32
 
-/* Struct que define o registro de cabe√ßalho */
+/* Struct que define o registro de cabeÁalho do arquivo de indice */
+typedef struct{
+    char status;
+    int nroRegistros;
+}Cabecalho_ind;
+
+/* Struct que define o registro de dados do arquivo de indice */
+typedef struct{
+    char chaveBusca[28];
+    int RRN;
+}Dados_ind;
+
+/* Struct que define o registro de cabeÁalho do arquivo de dados */
 typedef struct{
     char status;
     int topoPilha;
     char tagCampo1, desCampo1[55], tagCampo2, desCampo2[55], tagCampo3, desCampo3[55], tagCampo4, desCampo4[55], tagCampo5, desCampo5[55];
 }Cabecalho;
 
-/* Struct que define o registro de dados */
+/* Struct que define o registro de dados do arquivo de dados */
 typedef struct{
     char removido;
     int encadeamento;
@@ -35,34 +49,45 @@ typedef struct{
 /* Definindo nomes para os ponteiros das structs acima */
 typedef Dados* Dados_PTR;
 typedef Cabecalho* Header;
+typedef Dados_ind* Dados_ind_PTR;
+typedef Cabecalho_ind* Header_ind;
 
-/* Cabe√ßalho das fun√ß√µes */
-void ler_nomeEscola(char, FILE*, char*); /* Fun√ß√£o que l√™ o campo nomeEscola e associa a um vetor */
-void print_nomeEscola(char, FILE*); /* Fun√ß√£o que imprime o campo nomeEscola */
-int compara_string(char*, char*, int); /* Fun√ß√£o que compara duas strings e retorna 1 se forem iguais e 0 se forem diferentes */
-void limpa_string (char*, int); /* Fun√ß√£o que preenche a string com \0, evitando conflitos com outras strings que utilizam uma mesma vari√°vel */
-void ler_string (FILE*, char*, int); /* Fun√ß√£o que l√™ as strings de um arquivo bin√°rio */
-void escrever_string (FILE*, char*, int); /* Fun√ß√£o que escreve as strings em um arquivo bin√°rio */
-void preenche_registros(FILE*, int, int); /* Fun√ß√£o que preenche os registros com @, para que eles possuam tamanho fixo */
-void iniciar_cabecalho(Header); /* Define os valores iniciais do cabe√ßalho */
-void escrever_cabecalho(Header, FILE*); /* Escreve o cabe√ßalho no arquivo bin√°rio */
-int escrever_file_binario(Header, char*);   /* Fun√ß√£o respons√°vel por ler o csv e escrever os dados no arquivo bin√°rio */
-void sub_string (char*, char*, int, char, int*); /* Fun√ß√£o respons√°vel por separar strings de uma posi√ß√£o at√© encontrar um delimitador */
-void preenche_data(char*, char*, int*); /* Fun√ß√£o respons√°vel por preencher o campo data caso exista ou, caso seja nulo, faz as devidas mudan√ßas */
-void escrever_data_null(FILE*); /* Fun√ß√£o que faz o tratamento quando a data √© nula */
-void consultar_file_binario(char*);     /* Fun√ß√£o respons√°vel por ler e exibir todos os registros presentes no arquivo bin√°rio */
-void consultar_dado(char*, char*, char*);    /* Fun√ß√£o respons√°vel por procurar e exibir registros de algum dado espec√≠fico no arquivo bin√°rio */
-void consultar_rrn(char*, int);      /* Fun√ß√£o respons√°vel por consultar e exibir o registro do rrn solicitado */
-void remover_registro(char*, char*, char*, int); /* Fun√ß√£o que remove registros que satisfa√ßam o crit√©rio de busca do usuario */
-void insercao_adicional(char*, int, char*, int); /* Fun√ß√£o que insere dados nos registros removidos */
-void atualizar_registro(char*, int, char*, char*, int); /* Fun√ß√£o que atualiza um registro */
-void ordenaInteiro(char*, char*); /* Fun√ß√£o que l√™ e ordena os registros para inseri-los em um novo arquivo, j√° ordenados */
+/* CabeÁalho das funÁıes */
+void ler_nomeEscola(char, FILE*, char*); /* FunÁ„o que lÍ o campo nomeEscola e associa a um vetor */
+void print_nomeEscola(char, FILE*); /* FunÁ„o que imprime o campo nomeEscola */
+int compara_string(char*, char*, int); /* FunÁ„o que compara duas strings e retorna 1 se forem iguais e 0 se forem diferentes */
+void limpa_string (char*, int); /* FunÁ„o que preenche a string com \0, evitando conflitos com outras strings que utilizam uma mesma vari·vel */
+void ler_string (FILE*, char*, int); /* FunÁ„o que lÍ as strings de um arquivo bin·rio */
+void escrever_string (FILE*, char*, int); /* FunÁ„o que escreve as strings em um arquivo bin·rio */
+void preenche_registros(FILE*, int, int); /* FunÁ„o que preenche os registros com @, para que eles possuam tamanho fixo */
+void iniciar_cabecalho(Header); /* Define os valores iniciais do cabeÁalho */
+void escrever_cabecalho(Header, FILE*); /* Escreve o cabeÁalho no arquivo bin·rio */
+int escrever_file_binario(Header, char*);   /* FunÁ„o respons·vel por ler o csv e escrever os dados no arquivo bin·rio */
+void sub_string (char*, char*, int, char, int*); /* FunÁ„o respons·vel por separar strings de uma posiÁ„o atÈ encontrar um delimitador */
+void preenche_data(char*, char*, int*); /* FunÁ„o respons·vel por preencher o campo data caso exista ou, caso seja nulo, faz as devidas mudanÁas */
+void escrever_data_null(FILE*); /* FunÁ„o que faz o tratamento quando a data È nula */
+void consultar_file_binario(char*);     /* FunÁ„o respons·vel por ler e exibir todos os registros presentes no arquivo bin·rio */
+void consultar_dado(char*, char*, char*);    /* FunÁ„o respons·vel por procurar e exibir registros de algum dado especÌfico no arquivo bin·rio */
+void consultar_rrn(char*, int, int);      /* FunÁ„o respons·vel por consultar e exibir o registro do rrn solicitado */
+void remover_registro(char*, char*, char*, int); /* FunÁ„o que remove registros que satisfaÁam o critÈrio de busca do usuario */
+void insercao_adicional(char*, int, char*, int); /* FunÁ„o que insere dados nos registros removidos */
+void atualizar_registro(char*, int, char*, char*, int); /* FunÁ„o que atualiza um registro */
+void ordenaInteiro(char*, char*); /* FunÁ„o que lÍ e ordena os registros para inseri-los em um novo arquivo, j· ordenados */
 int qtdRegistro(FILE*); /* Retorna a quantidade de registros (sem considerar os removidos) */
-int guardaDados(FILE*, Dados_PTR); /* Fun√ß√£o que armazena todos os registros do arquivo em vetores */
-void merge(Dados_PTR*, int, int, int); /* Fun√ß√£o utilizada pelo mergeSort para ordenar o vetor */
+int guardaDados(FILE*, Dados_PTR); /* FunÁ„o que armazena todos os registros do arquivo em vetores */
+void merge(Dados_PTR*, int, int, int); /* FunÁ„o utilizada pelo mergeSort para ordenar o vetor */
 void mergeSort(Dados_PTR*, int, int); /* Ordena o vetor */
-void escrever_dados(Dados_PTR, FILE*, int*, char*, char*); /* Fun√ß√£o que escreve os registros no arquivo */
-void troca_reg(Dados_PTR, Dados_PTR, int, int); /* Fun√ß√£o que associa os campos dos registros do arquivo antigo com o novo */
-void merging(char*, char*, char*); /* Fun√ß√£o que realiza o processo de merging entre dois arquivos */
-void matching(char*, char*, char*); /* Fun√ß√£o que realiza o processo de matching entre dois arquivos */
-void binarioNaTela1(FILE*); /* Fun√ß√£o que mostra a sa√≠da do arquivo bin√°rio */
+void escrever_dados(Dados_PTR, FILE*, int*, char*, char*); /* FunÁ„o que escreve os registros no arquivo */
+void troca_reg(Dados_PTR, Dados_PTR, int, int); /* FunÁ„o que associa os campos dos registros do arquivo antigo com o novo */
+void merging(char*, char*, char*); /* FunÁ„o que realiza o processo de merging entre dois arquivos */
+void matching(char*, char*, char*); /* FunÁ„o que realiza o processo de matching entre dois arquivos */
+void cria_indice(char*, char*);
+void escreve_cabecalhoInd(FILE*, Header_ind);
+void escreve_DadosInd(FILE*, Dados_ind_PTR);
+int cria_indDados(FILE*, Dados_ind_PTR, int);
+void merge_ind(Dados_ind_PTR*, int, int, int); /* FunÁ„o utilizada pelo mergeSort para ordenar os registros do indice */
+void mergeSort_ind(Dados_ind_PTR*, int, int); /* Ordena os registros do indice*/
+void recupera_reg_ind(char*, char*, char*);
+int ler_chave_ind(FILE*, char *);
+int binarySearch(Dados_ind_PTR, int, int, char*);
+void binarioNaTela1(FILE*); /* FunÁ„o que mostra a saÌda do arquivo bin·rio */
